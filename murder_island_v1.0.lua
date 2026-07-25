@@ -1,6 +1,6 @@
 --[[
     谋杀之岛2世界 多功能脚本 v1.1
-    WindUI + Drawing ESP + Auto Kill + Speed + Flight
+    WindUI + Drawing ESP + Speed + Flight
     作者: b站英吉利超入_
 --]]
 
@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local LP = P.LocalPlayer
 if not LP then print("[谋杀之岛] 无LocalPlayer"); return end
 print("[谋杀之岛] 玩家: " .. LP.Name)
+
 for _, g in ipairs(C:GetChildren()) do
     if g:IsA("ScreenGui") then
         if g.Name == "A" or g.Name:find("Murder") or g.Name == "WindUI" then
@@ -22,18 +23,15 @@ for _, g in ipairs(C:GetChildren()) do
         end
     end
 end
+
 print("[谋杀之岛] 正在加载 WindUI...")
 local WI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 if not WI then print("[谋杀之岛] WindUI 加载失败"); return end
 print("[谋杀之岛] WindUI OK")
-local MurdererChoose
-pcall(function()
-    local rf = RS.Knit.Services.ActionPeriodService:FindFirstChild("RF")
-    if rf then MurdererChoose = rf:FindFirstChild("MurdererChoose") end
-end)
-print("[谋杀之岛] MurdererChoose=" .. (MurdererChoose and "OK" or "NIL"))
+print("[谋杀之岛] 游戏服务就绪")
+
 local S = {
-    AutoKill = false, KillRange = 50, Speed = false,
+    Speed = false,
     SpeedValue = 30, Flight = false, FlightSpeed = 50,
     EspEnabled = false, EspRange = 500, EspNames = true,
     EspBoxes = true, EspTracers = false, EspWeapon = true,
@@ -43,44 +41,12 @@ local S = {
 local KB = { Toggle = "RightShift" }
 local WN, CT = nil, {}
 local DrawingCache = {}
+
 local function getHRP()
     local c = LP.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
-local function getNearestPlayer(range)
-    local hrp = getHRP()
-    if not hrp then return nil end
-    local pos = hrp.Position
-    local nearest = nil
-    for _, p in ipairs(P:GetPlayers()) do
-        if p ~= LP and p.Character then
-            local target = p.Character:FindFirstChild("HumanoidRootPart")
-            local h = p.Character:FindFirstChildOfClass("Humanoid")
-            if target and h and h.Health > 0 then
-                local d = (target.Position - pos).Magnitude
-                if d <= range + 5 then
-                    if not nearest or d < nearest.D then
-                        nearest = {Player=p, HRP=target, D=d}
-                    end
-                end
-            end
-        end
-    end
-    return nearest
-end
-local function doKill()
-    if not S.AutoKill then return end
-    local target = getNearestPlayer(S.KillRange)
-    if not target then return end
-    if MurdererChoose then
-        local ok, result = pcall(function()
-            return MurdererChoose:InvokeServer(target.Player.Name)
-        end)
-        if ok and result == true then
-            print("[杀人] " .. target.Player.Name .. " @" .. math.floor(target.D) .. "m")
-        end
-    end
-end
+
 local function updateSpeed()
     local c = LP.Character
     if not c then return end
@@ -88,6 +54,7 @@ local function updateSpeed()
     if not h then return end
     h.WalkSpeed = S.Speed and S.SpeedValue or 16
 end
+
 local FlightBodyVel, FlightBodyGyro = nil, nil
 local function toggleFlight()
     local c = LP.Character
@@ -112,6 +79,7 @@ local function toggleFlight()
         if h then h.PlatformStand = false end
     end
 end
+
 spawn(function()
     while true do
         if S.Flight and FlightBodyVel and FlightBodyGyro then
@@ -132,9 +100,12 @@ spawn(function()
         wait(0.02)
     end
 end)
+
+-- ESP
 local function isKiller(p)
     return p:GetAttribute("CharacterId") == "Murderer"
 end
+
 local function clearESP()
     for _, drawings in pairs(DrawingCache) do
         pcall(function()
@@ -145,6 +116,7 @@ local function clearESP()
     end
     DrawingCache = {}
 end
+
 local function createESP(player)
     if DrawingCache[player.UserId] then return end
     local drawings = {}
@@ -164,6 +136,7 @@ local function createESP(player)
     tracer.Transparency = 1; drawings.Tracer = tracer
     DrawingCache[player.UserId] = drawings
 end
+
 local function updateESP()
     if not S.EspEnabled then return end
     local cam = workspace.CurrentCamera
@@ -227,7 +200,9 @@ local function updateESP()
         end
     end
 end
+
 spawn(function() while true do if S.EspEnabled then pcall(updateESP) end wait(0.03) end end)
+
 local PR, PS, PC = false, {}, nil
 local function sP()
     if PR then return end
@@ -254,18 +229,19 @@ local function sP()
     end end end) wait(0.03) end end)
 end
 local function xP() PR=false; if PC then pcall(function() local p=PC.Parent; if p then p:Destroy() end end) PC=nil end; PS={} end
+
 local tc_t = {Dark=Color3.fromRGB(255,60,60),Light=Color3.fromRGB(200,40,40),Rose=Color3.fromRGB(255,130,170),Plant=Color3.fromRGB(120,255,130),Ocean=Color3.fromRGB(60,190,240),Sunset=Color3.fromRGB(255,180,70),Midnight=Color3.fromRGB(130,100,240),Forest=Color3.fromRGB(60,210,90),Lavender=Color3.fromRGB(190,140,255),Coral=Color3.fromRGB(255,140,90),Mint=Color3.fromRGB(80,230,190),Sky=Color3.fromRGB(100,190,255),Blood=Color3.fromRGB(255,40,40),Lemon=Color3.fromRGB(230,210,70),Cyber=Color3.fromRGB(0,235,210)}
 local function tc(n) return tc_t[n] or Color3.fromRGB(255,60,60) end
+
 local function mW()
-    WN = WI:CreateWindow({Title="Murder Island 2",Author="b站英吉利超入_",Icon="solar:skull-bold",Size=UDim2.fromOffset(750,560),ToggleKey=Enum.KeyCode.RightShift,Folder="murder-script",Acrylic=true,Resizable=false,ScrollBarEnabled=true,HideSearchBar=true,OnClose=function() xP();S.AutoKill=false;S.EspEnabled=false;clearESP();if S.Flight then S.Flight=false;toggleFlight() end;for _,ct in pairs(CT) do if ct and type(ct.Set)=="function" then pcall(function() ct:Set(false) end) end end end,OnOpen=function() if S.Particles then sP() end end})
+    WN = WI:CreateWindow({Title="Murder Island 2",Author="b站英吉利超入_",Icon="solar:skull-bold",Size=UDim2.fromOffset(750,560),ToggleKey=Enum.KeyCode.RightShift,Folder="murder-script",Acrylic=true,Resizable=false,ScrollBarEnabled=true,HideSearchBar=true,OnClose=function() xP();S.EspEnabled=false;clearESP();if S.Flight then S.Flight=false;toggleFlight() end;for _,ct in pairs(CT) do if ct and type(ct.Set)=="function" then pcall(function() ct:Set(false) end) end end end,OnOpen=function() if S.Particles then sP() end end})
     spawn(function() wait(0.8) pcall(function() if WN and WN.Parent then WN.Parent.ClipsDescendants=true end end) end)
     local t1=WN:Tab({Title="主控面板",Icon="solar:slider-vertical-bold"})
-    CT.AutoKill=t1:Toggle({Flag="AutoKill",Title="自动杀人(杀手时)",Value=false,Callback=function(v) S.AutoKill=v end})
     CT.Speed=t1:Toggle({Flag="Speed",Title="加速",Value=false,Callback=function(v) S.Speed=v;updateSpeed() end})
     CT.SpeedSlider=t1:Slider({Flag="SpeedValue",Title="速度",Step=2,Value={Min=20,Max=100,Default=30},Width=200,Callback=function(v) S.SpeedValue=v;if S.Speed then updateSpeed() end end})
     CT.Flight=t1:Toggle({Flag="Flight",Title="飞行(WASD+空格+Shift)",Value=false,Callback=function(v) S.Flight=v;toggleFlight() end})
     CT.FlightSlider=t1:Slider({Flag="FlightSpeed",Title="飞行速度",Step=5,Value={Min=10,Max=200,Default=50},Width=200,Callback=function(v) S.FlightSpeed=v end})
-    CT.KillRange=t1:Slider({Flag="KillRange",Title="杀人范围",Step=5,Value={Min=10,Max=200,Default=50},Width=200,IsTextbox=true,Callback=function(v) S.KillRange=v end})
+
     local t2=WN:Tab({Title="透视",Icon="solar:eye-bold"})
     CT.EspEnabled=t2:Toggle({Flag="EspEnabled",Title="玩家ESP(Drawing)",Value=false,Callback=function(v) S.EspEnabled=v;if not v then clearESP() end end})
     t2:Space()
@@ -304,20 +280,20 @@ local function mW()
     local t7=WN:Tab({Title="关于",Icon="solar:info-square-bold"})
     t7:Paragraph({Title="Murder Island 2 v1.1"});t7:Divider()
     t7:Paragraph({Title="作者",Desc="b站英吉利超入_"})
-    t7:Paragraph({Title="功能",Desc="自动杀人/加速/飞行/ESP透视/杀手高亮"})
+    t7:Paragraph({Title="功能",Desc="加速/飞行/ESP透视/杀手高亮"})
     UIS.InputBegan:Connect(function(input,gpe) if gpe or input.UserInputType~=Enum.UserInputType.Keyboard then return end;local kn=input.KeyCode and input.KeyCode.Name or "";if kn==KB.Toggle and WN then pcall(function() WN:Toggle() end) end end)
     return sPlayers,sRole
 end
+
 pcall(function() WI:SetTheme("Dark") end)
 S.ParticleColor=tc("Dark")
-local popupOk=pcall(function() local PP=false;WI:Popup({Title="Murder Island 2 v1.1",Content="自动杀人/加速/飞行/ESP透视/杀手高亮",Buttons={{Title="加载",Callback=function() PP=true end,Variant="Primary"},{Title="取消",Callback=function() return end}}});while not PP do wait(0.1) end end)
+local popupOk=pcall(function() local PP=false;WI:Popup({Title="Murder Island 2 v1.1",Content="加速/飞行/ESP透视/杀手高亮",Buttons={{Title="加载",Callback=function() PP=true end,Variant="Primary"},{Title="取消",Callback=function() return end}}});while not PP do wait(0.1) end end)
 if not popupOk then print("[谋杀之岛] Popup跳过(Real限制),直接开窗口...") end
 spawn(function()
     local sPlayers,sRole=mW()
     print("[谋杀之岛] v1.1 运行中")
     local last=0
     while true do
-        if S.AutoKill then pcall(doKill) end
         wait(0.5)
         if S.Speed then updateSpeed() end
         local now=tick()
